@@ -1,0 +1,10 @@
+__pycache__/
+.env
+venv/
+uploads/
+.idea/
+.vscode/
+*.pyc
+.ipynb
+storage/
+etc/
