@@ -9,3 +9,4 @@ uploads/
 storage/
 etc/
 config.py
+settings.py
