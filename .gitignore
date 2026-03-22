@@ -5,6 +5,7 @@ uploads/
 .idea/
 .vscode/
 *.pyc
-.ipynb
+*.ipynb
 storage/
 etc/
+config.py

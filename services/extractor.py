@@ -1,0 +1,178 @@
+import json
+from openai import OpenAI
+
+
+class OpenAIExtractor:
+    def __init__(self, api_key: str, model: str = "gpt-4.1-mini"):
+        self.client = OpenAI(api_key=api_key)
+        self.model = model
+
+    def extract(self, pdf_path: str) -> dict:
+        file_id = self._upload_file(pdf_path)
+        response_text = self._request_extraction(file_id)
+        return self._parse_response(response_text)
+
+    def _upload_file(self, pdf_path: str) -> str:
+        with open(pdf_path, "rb") as f:
+            uploaded = self.client.files.create(
+                file=f,
+                purpose="user_data"
+            )
+        return uploaded.id
+
+    def _request_extraction(self, file_id: str) -> str:
+        response = self.client.responses.create(
+            model=self.model,
+            text=self._build_text_format(),
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_file", "file_id": file_id},
+                        {"type": "input_text", "text": self._build_prompt()}
+                    ]
+                }
+            ]
+        )
+        return response.output_text
+
+    def _parse_response(self, response_text: str) -> dict:
+        return json.loads(response_text)
+
+    def _build_text_format(self) -> dict:
+        return {
+             "format": {
+            "type": "json_schema",
+            "name": "financial_inputs_ru",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "period": {"type": ["string", "null"]},
+                    "unit": {
+                        "type": "string",
+                        "enum": ["rub", "thousand_rub", "million_rub", "unknown"]
+                    },
+                    "financial_inputs": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "total_assets": {"type": ["integer", "null"]},
+                            "equity": {"type": ["integer", "null"]},
+                            "long_term_liabilities": {"type": ["integer", "null"]},
+                            "short_term_liabilities": {"type": ["integer", "null"]},
+                            "current_assets": {"type": ["integer", "null"]},
+                            "revenue": {"type": ["integer", "null"]},
+                            "net_income": {"type": ["integer", "null"]},
+                            "previous_year_revenue": {"type": ["integer", "null"]}
+                        },
+                        "required": [
+                            "total_assets",
+                            "equity",
+                            "long_term_liabilities",
+                            "short_term_liabilities",
+                            "current_assets",
+                            "revenue",
+                            "net_income",
+                            "previous_year_revenue"
+                        ]
+                    }
+                },
+                "required": ["period", "unit", "financial_inputs"]
+            }
+        }
+    }
+
+    def _build_prompt(self) -> str:
+        return """
+ЗАДАЧА
+Извлеки из PDF бухгалтерской отчетности российской компании только нужные поля.
+Возьми только последний доступный отчетный год.
+
+ВЫВОД
+Верни только JSON по схеме.
+
+ПОЛЯ
+1. total_assets
+2. equity
+3. long_term_liabilities
+4. short_term_liabilities
+5. current_assets
+6. revenue
+7. net_income
+8. previous_year_revenue
+
+КАК ИСКАТЬ ПОЛЯ
+
+1. total_assets
+Ищи строку:
+- "БАЛАНС"
+- "Баланс"
+
+2. equity
+Ищи строку:
+- "Итого по разделу III. Капитал и резервы"
+- "Итого по разделу III"
+- "Капитал и резервы"
+
+3. long_term_liabilities
+Ищи строку:
+- "Итого по разделу IV. Долгосрочные обязательства"
+- "Итого по разделу IV"
+- "Долгосрочные обязательства"
+
+4. short_term_liabilities
+Ищи строку:
+- "Итого по разделу V. Краткосрочные обязательства"
+- "Итого по разделу V"
+- "Краткосрочные обязательства"
+
+5. current_assets
+Ищи строку:
+- "Итого по разделу II. Оборотные активы"
+- "Итого по разделу II"
+- "Оборотные активы"
+
+6. revenue
+Ищи строку:
+- "Выручка"
+
+7. net_income
+Ищи строку:
+- "Чистая прибыль (убыток)"
+- "Чистая прибыль"
+
+8. previous_year_revenue
+Ищи строку:
+- "Выручка"
+Возьми значение за год, который идет перед последним отчетным годом.
+
+ПРАВИЛА
+- Ищи только строки из списка выше.
+- Бери только последний доступный отчетный год.
+- Для previous_year_revenue бери предыдущий год относительно последнего.
+- Возвращай только число из таблицы.
+- Ничего не пересчитывай.
+- Ничего не дели.
+- Ничего не умножай.
+- Не меняй масштаб.
+- Не округляй.
+- Не добавляй десятичную точку.
+- Если в таблице число записано как "2 730 160 826", верни 2730160826.
+- Если указано "Единица измерения: тыс. руб.", верни unit = "thousand_rub".
+- Если указано "Единица измерения: руб.", верни unit = "rub".
+- Если указано "Единица измерения: млн руб.", верни unit = "million_rub".
+- Если единицу измерения определить нельзя, верни unit = "unknown".
+- Если поле не найдено точно, верни null.
+- Если стоит прочерк, верни null.
+- Для итогов разделов бери именно итог раздела, а не внутренние строки.
+- Для total_assets бери именно строку "БАЛАНС".
+- Для revenue бери только строку "Выручка".
+- Для net_income бери только строку "Чистая прибыль (убыток)" или "Чистая прибыль".
+
+ПРОВЕРКА ПЕРЕД ОТВЕТОМ
+- Убедись, что возвращаешь только JSON.
+- Убедись, что все числовые поля либо integer, либо null.
+- Убедись, что unit заполнен.
+"""
