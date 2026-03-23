@@ -10,6 +10,7 @@ from services.extractor import OpenAIExtractor
 from services.metrics import MetricsCalculator
 from services.interpreter import MetricsInterpreter
 from services.audit_questions import AuditQuestionsAnalyzer
+from services.model_metrics import MetricsLLMInterpreter
 from settings import api_key
 
 router = Router()
@@ -19,6 +20,7 @@ extractor = OpenAIExtractor(api_key=api_key)
 calculator = MetricsCalculator()
 interpreter = MetricsInterpreter()
 analizer = AuditQuestionsAnalyzer(api_key=api_key)
+draft = MetricsLLMInterpreter(api_key=api_key)
 
 
 def process_pdf(pdf_path: str) -> dict:
@@ -26,12 +28,14 @@ def process_pdf(pdf_path: str) -> dict:
     metrics = calculator.calculate(extracted_data)
     result = interpreter.interpret(metrics)
     answers = analizer.analyze(pdf_path)
+    description = draft.interpret(metrics)
 
     return {
         "extracted_data": extracted_data,
         "metrics": metrics,
         "interpreter": result,
-        "answers": answers
+        "answers": answers,
+        "description": description
     }
 
 
@@ -79,8 +83,9 @@ async def document_handler(message: Message):
         await message.answer(
             #f"Извлеченные данные:\n{result['extracted_data']}\n\n"
             #f"Метрики:\n{result['metrics']}\n\n"
-            f"Интерпретация метрик:\n{result['interpreter']}\n\n"
-            f"Аудиторские вопросы:\n{result['answers']}"
+            f"Ключевые метрики:\n{result['interpreter']}\n\n"
+            f"Анализ метрик:\n{result['description']}\n\n"
+            f"Аудиторские вопросы:\n{result['answers']}\n\n"
             f"**Не является финансовой рекомендацией**"
         )
 
