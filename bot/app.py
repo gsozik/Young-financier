@@ -9,6 +9,7 @@ from storage.file_storage import LocalFileStorage
 from services.extractor import OpenAIExtractor
 from services.metrics import MetricsCalculator
 from services.interpreter import MetricsInterpreter
+from services.audit_questions import AuditQuestionsAnalyzer
 from settings import api_key
 
 router = Router()
@@ -17,17 +18,20 @@ storage = LocalFileStorage("storage")
 extractor = OpenAIExtractor(api_key=api_key)
 calculator = MetricsCalculator()
 interpreter = MetricsInterpreter()
+analizer = AuditQuestionsAnalyzer(api_key=api_key)
 
 
 def process_pdf(pdf_path: str) -> dict:
     extracted_data = extractor.extract(pdf_path)
     metrics = calculator.calculate(extracted_data)
     result = interpreter.interpret(metrics)
+    answers = analizer.analyze(pdf_path)
 
     return {
         "extracted_data": extracted_data,
         "metrics": metrics,
-        "interpreter": result
+        "interpreter": result,
+        "answers": answers
     }
 
 
@@ -73,9 +77,11 @@ async def document_handler(message: Message):
         result = process_pdf(saved_path)
 
         await message.answer(
-            f"Извлеченные данные:\n{result['extracted_data']}\n\n"
-            f"Метрики:\n{result['metrics']}\n\n"
-            f"Интерпретация метрик\n{result['interpreter']}"
+            #f"Извлеченные данные:\n{result['extracted_data']}\n\n"
+            #f"Метрики:\n{result['metrics']}\n\n"
+            f"Интерпретация метрик:\n{result['interpreter']}\n\n"
+            f"Аудиторские вопросы:\n{result['answers']}"
+            f"**Не является финансовой рекомендацией**"
         )
 
     except Exception as e:
