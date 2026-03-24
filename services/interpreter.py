@@ -4,12 +4,16 @@ class MetricsInterpreter:
         self.debt_to_equity = metrics.get("debt_to_equity", None)
         self.debt_ratio = metrics.get("debt_ratio", None)
         self.current_ratio = metrics.get("current_ratio", None)
+        self.quick_ratio = metrics.get("quick_ratio", None)
+        self.cash_ratio = metrics.get("cash_ratio", None)
         self.working_capital = metrics.get("working_capital", None)
         self.net_margin = metrics.get("net_margin", None)
         self.return_on_assets = metrics.get("return_on_assets", None)
         self.return_on_equity = metrics.get("return_on_equity", None)
         self.asset_turnover = metrics.get("asset_turnover", None)
         self.revenue_growth = metrics.get("revenue_growth", None)
+        self.receivables_turnover = metrics.get("receivables_turnover", None)
+        self.interest_coverage_ratio = metrics.get("interest_coverage_ratio", None)
 
         lines = [
             self._format_percent(
@@ -27,6 +31,14 @@ class MetricsInterpreter:
             self._format_number(
                 "Current Ratio (коэффициент текущей ликвидности)",
                 self.current_ratio
+            ),
+            self._format_number(
+                "Quick Ratio (коэффициент быстрой ликвидности)",
+                self.quick_ratio
+            ),
+            self._format_number(
+                "Cash Ratio (коэффициент абсолютной ликвидности)",
+                self.cash_ratio
             ),
             self._format_integer(
                 "Working Capital (чистый оборотный капитал)",
@@ -51,6 +63,14 @@ class MetricsInterpreter:
             self._format_percent(
                 "Revenue Growth (темп роста выручки)",
                 self.revenue_growth
+            ),
+            self._format_number(
+                "Receivables Turnover (оборачиваемость дебиторской задолженности)",
+                self.receivables_turnover
+            ),
+            self._format_number(
+                "Interest Coverage Ratio (покрытие процентов прибылью)",
+                self.interest_coverage_ratio
             ),
         ]
 

@@ -1,11 +1,12 @@
 import io
+import random
 
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 from bot.keyboard import main_keyboard
-from storage.file_storage import LocalFileStorage
+from services.file_storage import LocalFileStorage
 from services.extractor import OpenAIExtractor
 from services.metrics import MetricsCalculator
 from services.interpreter import MetricsInterpreter
@@ -64,7 +65,7 @@ async def document_handler(message: Message):
         await message.answer("Пожалуйста, отправьте файл с отчетностью в формате pdf.")
         return
 
-    await message.answer("Обрабатываю....")
+    await message.answer(f"Обрабатываю.... Обработка займет около {random.randint(1,3)} минут....")
 
     bot = message.bot
     telegram_file = await bot.get_file(document.file_id)
@@ -83,7 +84,7 @@ async def document_handler(message: Message):
         await message.answer(
             #f"Извлеченные данные:\n{result['extracted_data']}\n\n"
             #f"Метрики:\n{result['metrics']}\n\n"
-            f"Ключевые метрики:\n{result['interpreter']}\n\n"
+            f"Расчеты в {result['extracted_data']['unit']}\nКлючевые метрики:\n{result['interpreter']}\n\n"
             f"Анализ метрик:\n{result['description']}\n\n"
             f"Аудиторские вопросы:\n{result['answers']}\n\n"
             f"**Не является финансовой рекомендацией**"
